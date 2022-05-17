@@ -20,9 +20,19 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LifecycleCoroutineScope
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.busschedule.adapter.BusStopAdapter
+import com.example.busschedule.database.AppDatabase
+import com.example.busschedule.database.schedule.Schedule
 import com.example.busschedule.databinding.FullScheduleFragmentBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.NonDisposableHandle.parent
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class FullScheduleFragment: Fragment() {
 
@@ -38,14 +48,27 @@ class FullScheduleFragment: Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         _binding = FullScheduleFragmentBinding.inflate(inflater, container, false)
-        val view = binding.root
-        return view
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         recyclerView = binding.recyclerView
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
+
+        lifecycleScope.launch {
+            val busSchedules = getAllBusSchedules()
+
+            if(busSchedules != null) {
+                recyclerView.adapter = BusStopAdapter(busSchedules)
+            }
+        }
+    }
+
+    private suspend fun getAllBusSchedules(): List<Schedule>? {
+        return withContext(Dispatchers.IO) {
+            return@withContext context?.let { AppDatabase.getDatabase(it).scheduleDao().getAll() }
+        }
     }
 
     override fun onDestroyView() {
